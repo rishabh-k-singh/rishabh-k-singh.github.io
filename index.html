@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rishabh Kumar Singh</title>
+<meta name="description" content="Rishabh Kumar Singh, Ph.D. candidate at IIT Bombay, working on nonlinear control and robotic herding of multi-agent systems.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<style>
+/* Layout: a lab notebook of live figures. Each result is a short margin note beside a large running simulation. */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --fg: #16212c;
+  --muted: #566573;
+  --line: #d3dbe2;
+  --accent: #0d5c9e;
+  --herder: #cf4a12;
+  --agent: #0d5c9e;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10171e; --surface: #17212a; --fg: #e4eaf0; --muted: #9fb0be;
+    --line: #2d3b47; --accent: #5593cc; --herder: #e2703a; --agent: #5593cc;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10171e; --surface: #17212a; --fg: #e4eaf0; --muted: #9fb0be;
+  --line: #2d3b47; --accent: #5593cc; --herder: #e2703a; --agent: #5593cc;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 4rem; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--body); font-size: 1.0625rem; line-height: 1.55;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; z-index: 10;
+  height: env(safe-area-inset-top, 0px); background: var(--bg);
+}
+a { color: var(--accent); text-underline-offset: 0.16em; }
+a:focus-visible, button:focus-visible, input:focus-visible, .hit:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+h1, h2, h3 { font-family: var(--display); line-height: 1.15; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+ul { margin: 0; padding: 0; list-style: none; }
+.wrap {
+  max-width: 74rem; margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* Top bar */
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+}
+.bar .wrap {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+  gap: 0.25rem 1.5rem; padding-block: 0.7rem;
+}
+.brand { font-family: var(--display); font-weight: 700; color: var(--fg); text-decoration: none; }
+.bar nav { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; }
+.bar nav a { font-family: var(--mono); font-size: 0.8125rem; color: var(--muted); text-decoration: none; }
+.bar nav a:hover { color: var(--accent); }
+
+/* Opening */
+.open {
+  display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 3rem; align-items: center; padding-block: 2.5rem;
+}
+.who { display: grid; gap: 1.1rem; min-width: 0; }
+.who img {
+  width: 7.5rem; height: 7.5rem; object-fit: cover;
+  border-radius: 50%; border: 1px solid var(--line);
+}
+h1 { font-size: clamp(2.4rem, 5.2vw, 3.6rem); font-weight: 700; letter-spacing: -0.02em; }
+.role { font-family: var(--mono); font-size: 0.8125rem; line-height: 1.55; color: var(--muted); }
+.lede { font-size: 1.25rem; line-height: 1.45; }
+.status { border-top: 1px solid var(--line); padding-top: 0.9rem; }
+.status strong { font-weight: 600; }
+.interests { font-size: 1rem; line-height: 1.5; }
+.links { display: flex; flex-wrap: wrap; gap: 0.35rem 1.25rem; font-family: var(--mono); font-size: 0.875rem; }
+
+/* Stages hold the live figures */
+.stage { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; display: grid; min-width: 0; overflow: hidden; }
+.stage canvas { display: block; width: 100%; max-width: 100%; }
+.square { aspect-ratio: 1 / 1; }
+.wide { aspect-ratio: 1 / 0.62; }
+.hero { aspect-ratio: 1 / 0.82; }
+#sim { cursor: grab; touch-action: pan-y; }
+.ask { display: grid; gap: 0.5rem; padding: 1rem 1.1rem 1.1rem; border-top: 1px solid var(--line); }
+.ask h2 { font-size: clamp(1.35rem, 2.6vw, 1.75rem); }
+.ask-row { justify-content: space-between; align-items: center; }
+.strip { height: 150px; border-top: 1px solid var(--line); }
+.duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.duo > * + * { border-left: 1px solid var(--line); }
+.plots { display: grid; grid-template-rows: repeat(2, minmax(0, 1fr)); min-height: 0; }
+.plots canvas { height: 100%; }
+.plots canvas + canvas { border-top: 1px solid var(--line); }
+
+.ctl { display: grid; gap: 0.75rem; padding: 0.8rem 1rem 0.9rem; border-top: 1px solid var(--line); }
+.sliders { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem 1.5rem; }
+.sliders label { display: grid; gap: 0.25rem; font-family: var(--mono); font-size: 0.8125rem; color: var(--muted); min-width: 0; }
+.sliders .row { display: flex; justify-content: space-between; gap: 0.5rem; }
+.sliders output { color: var(--fg); font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; margin: 0; accent-color: var(--accent); }
+
+.btns { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+button {
+  font-family: var(--mono); font-size: 0.8125rem; color: var(--fg); cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 0.3rem 0.7rem;
+}
+button:hover { border-color: var(--accent); color: var(--accent); }
+button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+
+/* Sections */
+section { border-top: 1px solid var(--line); }
+.sec { display: grid; gap: 2.75rem; padding-block: 2.75rem; }
+h2 { font-size: 1.6rem; font-weight: 700; }
+
+/* A result: margin note beside the figure */
+.demo { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); gap: 2rem; align-items: start; }
+.note { display: grid; gap: 0.8rem; min-width: 0; position: sticky; top: 4.25rem; }
+h3 { font-size: 1.3rem; font-weight: 700; }
+.step { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.tag { font-family: var(--mono); font-size: 0.8125rem; color: var(--muted); }
+.lab { font-family: var(--mono); font-size: 0.8125rem; color: var(--muted); display: grid; gap: 0.3rem; }
+.live { font-family: var(--mono); font-size: 0.8125rem; color: var(--muted); min-height: 1.3em; }
+
+/* Diagrams */
+.diagram { margin: 0; display: grid; gap: 0.5rem; min-width: 0; }
+.scroll { overflow-x: auto; }
+.diagram svg { display: block; width: 100%; max-width: 54rem; min-width: 620px; height: auto; color: var(--fg); }
+.b { fill: var(--surface); stroke: var(--muted); stroke-width: 1; }
+.b-key { fill: var(--surface); stroke: var(--accent); stroke-width: 1.5; }
+.grp { fill: none; stroke: var(--line); stroke-width: 1; stroke-dasharray: 5 4; }
+.w { fill: none; stroke: currentColor; stroke-width: 1.25; }
+.w-h { fill: none; stroke: var(--herder); stroke-width: 1.75; }
+.mk { fill: currentColor; }
+.mk-h { fill: var(--herder); }
+.t { font-family: var(--mono); font-size: 12px; fill: currentColor; }
+.t-s { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+.t-h { font-family: var(--mono); font-size: 12px; fill: var(--herder); }
+.t-b { font-family: var(--display); font-size: 14px; font-weight: 700; fill: currentColor; }
+.cap { font-family: var(--mono); font-size: 0.8125rem; color: var(--muted); }
+
+/* Key numbers and chart */
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
+.stats div { display: grid; gap: 0.15rem; min-width: 0; }
+.stats b { font-family: var(--display); font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.stats span { font-family: var(--mono); font-size: 0.8125rem; line-height: 1.4; color: var(--muted); }
+.result { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2.5rem; align-items: center; }
+.chart svg { min-width: 0; }
+.ax { stroke: var(--line); stroke-width: 1; }
+.dot-m { fill: var(--accent); stroke: var(--bg); stroke-width: 2; }
+.dot-p { fill: var(--bg); stroke: var(--herder); stroke-width: 2; }
+.ref { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.hit { fill: transparent; cursor: default; }
+.tip { position: absolute; z-index: 3; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 0.25rem 0.5rem; font-family: var(--mono); font-size: 0.75rem; color: var(--fg); white-space: nowrap; }
+.chartbox { position: relative; min-width: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1.1rem; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.legend svg { width: 22px; height: 12px; min-width: 0; }
+details { font-family: var(--mono); font-size: 0.8125rem; color: var(--muted); }
+details table { border-collapse: collapse; margin-top: 0.5rem; font-variant-numeric: tabular-nums; }
+details th, details td { text-align: right; padding: 0.15rem 0.9rem 0.15rem 0; border-bottom: 1px solid var(--line); }
+
+/* Publications and background */
+.two { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 2rem; }
+.list { display: grid; gap: 1.1rem; min-width: 0; max-width: 50rem; }
+.label { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.pub { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); gap: 0.5rem; font-size: 1rem; }
+.pub .id { font-family: var(--mono); font-size: 0.875rem; color: var(--accent); padding-top: 0.1rem; }
+.rows li { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 1rem; padding-block: 0.4rem; border-top: 1px solid var(--line); font-size: 1rem; }
+.rows .when { font-family: var(--mono); font-size: 0.8125rem; color: var(--muted); padding-top: 0.1rem; font-variant-numeric: tabular-nums; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem 2.5rem; }
+.group { display: grid; gap: 0.5rem; align-content: start; min-width: 0; }
+
+footer { border-top: 1px solid var(--line); }
+footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.3rem 2rem; padding-block: 1.25rem 2rem; font-family: var(--mono); font-size: 0.8125rem; color: var(--muted); }
+
+@media (max-width: 900px) {
+  .open { grid-template-columns: minmax(0, 1fr); gap: 1.75rem; padding-block: 1.75rem; }
+  .demo { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  .note { position: static; }
+  .result, .grid2 { grid-template-columns: minmax(0, 1fr); }
+  .two { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+}
+@media (max-width: 560px) {
+  .duo { grid-template-columns: minmax(0, 1fr); }
+  .duo > * + * { border-left: 0; border-top: 1px solid var(--line); }
+  .plots canvas { height: 150px; }
+  .stats { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  .rows li { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+.diagram svg.only-phone { display: none; }
+@media (max-width: 640px) {
+  .diagram svg.only-wide { display: none; }
+  .diagram svg.only-phone { display: block; min-width: 0; max-width: 26rem; margin-inline: auto; }
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top">Rishabh Kumar Singh</a>
+    <nav aria-label="Sections">
+      <a href="#research">Strategies</a>
+      <a href="#publications">Publications</a>
+      <a href="#background">Background</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap open">
+    <div class="who">
+      <img src="photo.jpg" alt="Portrait of Rishabh Kumar Singh" width="480" height="480">
+      <h1>Rishabh Kumar Singh</h1>
+      <p class="role">Ph.D. Candidate, Control and Computing Group<br>Electrical Engineering, IIT Bombay</p>
+      <p class="lede">We propose novel strategies for a single herder to gather multiple non-cooperative agents around a desired target, where each agent is repelled from the herder by an inverse-square law.</p>
+      <div class="group">
+        <p class="label">Research interests</p>
+        <p class="interests">Nonlinear control &middot; Stability theory &middot; Multi-agent systems &middot; Pursuit&ndash;evasion and differential games &middot; Nonholonomic systems &middot; Optimal control</p>
+      </div>
+      <p class="status"><strong>Looking for postdoctoral positions.</strong> Thesis submission expected December 2026.</p>
+      <p class="links">
+        <a href="cv.pdf">CV</a>
+        <a href="https://scholar.google.com/citations?user=FXQ_lskAAAAJ">Google Scholar</a>
+        <a href="https://orcid.org/0009-0004-1146-721X">ORCID</a>
+        <a href="https://github.com/rishabh-k-singh">GitHub</a>
+      </p>
+    </div>
+    <div class="stage">
+      <canvas id="sim" class="hero" role="img" aria-label="The herding problem: many agents scattered around a fixed target, and one herder. Arrows show each agent being pushed away from the herder, more strongly when closer. Drag the herder to try to bring them to the target."></canvas>
+      <div class="ask">
+        <h2>How can one herder bring every agent to the target?</h2>
+        <p>Each agent only moves away from the herder, with speed <i>k</i>/<i>d</i><sup>2</sup> at distance <i>d</i>.</p>
+        <div class="btns ask-row">
+          <span class="cap">Drag the herder and try it.</span>
+          <button id="res0" type="button">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section id="research">
+    <div class="wrap sec">
+      <h2>Proposed strategies</h2>
+
+      <div class="demo">
+        <div class="note">
+          <p class="step">Strategy 1</p>
+          <h3>A blind herder</h3>
+          <p>It circles at a fixed speed and senses nothing, yet the agents gather on one small orbit around the target.</p>
+          <div class="sliders" style="grid-template-columns: minmax(0, 1fr);">
+            <label for="w1">
+              <span class="row"><span>Herder speed &omega;</span><output id="w1Out" for="w1">1.00</output></span>
+              <input id="w1" type="range" min="0.5" max="3" step="0.25" value="1">
+            </label>
+            <label for="n1">
+              <span class="row"><span>Number of agents</span><output id="n1Out" for="n1">24</output></span>
+              <input id="n1" type="range" min="1" max="60" step="1" value="24">
+            </label>
+          </div>
+          <div class="btns">
+            <button id="p1" type="button">Pause</button>
+            <button id="res1" type="button">Restart</button>
+          </div>
+          <p class="cap">Agents start inside the region of attraction.</p>
+          <p class="tag">[C1]</p>
+        </div>
+        <div class="stage">
+          <canvas id="still" class="wide" role="img" aria-label="Agents converge to one small circular orbit around the target while the herder circles them."></canvas>
+          <canvas id="openPlot" class="strip" role="img" aria-label="Live plot of each agent's distance from the target, converging to the predicted orbit."></canvas>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="note">
+          <p class="step">Strategy 2</p>
+          <h3>Sense one agent</h3>
+          <p>The herder sets its radius from one agent's distance to the target, so it spirals in as the herd gathers.</p>
+          <div class="btns" id="w2btns" role="group" aria-label="Scenario">
+            <button type="button" data-p="0" aria-pressed="true">Spiral in (&omega; = 5)</button>
+            <button type="button" data-p="1" aria-pressed="false">Slow herder (&omega; = 0.25)</button>
+          </div>
+          <div class="sliders" style="grid-template-columns: minmax(0, 1fr);">
+            <label for="nf">
+              <span class="row"><span>Number of agents</span><output id="nfOut" for="nf">16</output></span>
+              <input id="nf" type="range" min="2" max="50" step="1" value="16">
+            </label>
+          </div>
+          <p class="live" id="n2"></p>
+          <div class="btns">
+            <button id="p2" type="button">Pause</button>
+            <button id="res2" type="button">Restart</button>
+          </div>
+          <p class="tag">[J1]</p>
+        </div>
+        <div class="diagram" style="gap: 1rem;">
+          <div class="scroll">
+            <svg class="only-phone" viewBox="0 0 340 282" role="img" aria-label="The feedback law adds one signal to the open-loop law: the radius of agent e0 returns from the agents to the herder law.">
+              <defs>
+                <marker id="ph1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0 L10 5 L0 10 z"/></marker>
+                <marker id="ph2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-h" d="M0 0 L10 5 L0 10 z"/></marker>
+              </defs>
+              <rect class="b" x="20" y="8" width="230" height="54" rx="3"/>
+              <text class="t" x="135" y="31" text-anchor="middle">Herder law</text>
+              <text class="t-s" x="135" y="49" text-anchor="middle">radius R e^(&#945;(r&#8320;&#8722;&#954;))</text>
+              <line class="w" x1="135" y1="62" x2="135" y2="96" marker-end="url(#ph1)"/>
+              <text class="t-s" x="145" y="83">position h(t)</text>
+              <rect class="b" x="20" y="98" width="230" height="54" rx="3"/>
+              <text class="t" x="135" y="121" text-anchor="middle">Repulsion</text>
+              <text class="t-s" x="135" y="139" text-anchor="middle">inverse square</text>
+              <line class="w" x1="135" y1="152" x2="135" y2="186" marker-end="url(#ph1)"/>
+              <text class="t-s" x="145" y="173">velocity</text>
+              <rect class="b" x="20" y="188" width="230" height="54" rx="3"/>
+              <text class="t" x="135" y="211" text-anchor="middle">Agents</text>
+              <text class="t-s" x="135" y="229" text-anchor="middle">e&#8320; &#8230; e&#8345;&#8331;&#8321;</text>
+              <polyline class="w-h" points="250,215 310,215 310,35 252,35" marker-end="url(#ph2)"/>
+              <text class="t-h" x="170" y="268" text-anchor="middle">r&#8320;(t): one agent's radius, the added signal</text>
+            </svg>
+            <svg class="only-wide" viewBox="0 0 760 150" role="img" aria-label="The feedback law adds one signal to the open-loop law: the radius of agent e0 returns from the agents to the herder law.">
+              <defs>
+                <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0 L10 5 L0 10 z"/></marker>
+                <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-h" d="M0 0 L10 5 L0 10 z"/></marker>
+              </defs>
+              <rect class="b" x="10" y="14" width="190" height="56" rx="3"/>
+              <text class="t" x="105" y="38" text-anchor="middle">Herder law</text>
+              <text class="t-s" x="105" y="56" text-anchor="middle">radius R e^(&#945;(r&#8320;&#8722;&#954;))</text>
+              <line class="w" x1="200" y1="42" x2="292" y2="42" marker-end="url(#a1)"/>
+              <text class="t-s" x="246" y="34" text-anchor="middle">position h(t)</text>
+              <rect class="b" x="294" y="14" width="190" height="56" rx="3"/>
+              <text class="t" x="389" y="38" text-anchor="middle">Repulsion</text>
+              <text class="t-s" x="389" y="56" text-anchor="middle">inverse square</text>
+              <line class="w" x1="484" y1="42" x2="566" y2="42" marker-end="url(#a1)"/>
+              <text class="t-s" x="525" y="34" text-anchor="middle">velocity</text>
+              <rect class="b" x="568" y="14" width="182" height="56" rx="3"/>
+              <text class="t" x="659" y="38" text-anchor="middle">Agents</text>
+              <text class="t-s" x="659" y="56" text-anchor="middle">e&#8320; &#8230; e&#8345;&#8331;&#8321;</text>
+              <polyline class="w-h" points="659,70 659,112 105,112 105,72" marker-end="url(#a2)"/>
+              <text class="t-h" x="382" y="134" text-anchor="middle">r&#8320;(t): one agent's radius, the only signal added to open loop</text>
+            </svg>
+          </div>
+          <div class="stage">
+            <div class="duo">
+              <canvas id="ol" class="square" role="img" aria-label="Open-loop herder at the selected speed."></canvas>
+              <canvas id="fb" class="square" role="img" aria-label="Feedback herder with the same agents at the same speed. The sensed agent is drawn as a ring."></canvas>
+            </div>
+            <canvas id="fbPlot" class="strip" role="img" aria-label="Live plot of herder and agent distance from the target under feedback. The herder's radius falls as the agents converge."></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="note">
+          <p class="step">Closer to real robots</p>
+          <h3>Give agents room</h3>
+          <p>Both strategies send agents to one point, where real robots would collide. So agents also repel each other.</p>
+          <div class="sliders" style="grid-template-columns: minmax(0, 1fr);">
+            <label for="w3">
+              <span class="row"><span>Speed &omega; moves the herd</span><output id="w3Out" for="w3">1.00</output></span>
+              <input id="w3" type="range" min="1" max="4" step="0.25" value="1">
+            </label>
+            <label for="g3">
+              <span class="row"><span>Repulsion &gamma; sizes it</span><output id="g3Out" for="g3">0.001</output></span>
+              <input id="g3" type="range" min="0" max="2" step="1" value="2">
+            </label>
+            <label for="nr">
+              <span class="row"><span>Number of agents</span><output id="nrOut" for="nr">16</output></span>
+              <input id="nr" type="range" min="2" max="40" step="1" value="16">
+            </label>
+          </div>
+          <div class="btns">
+            <button id="p4" type="button">Pause</button>
+            <button id="res4" type="button">Restart</button>
+          </div>
+          <p class="cap">Proved: no collision in finite time. Estimated: herd size grows as &gamma;<sup>1/3</sup>.</p>
+        </div>
+        <div class="stage">
+          <div class="duo">
+            <canvas id="noRep" class="square" role="img" aria-label="Agents without mutual repulsion merge at a single point and overlap."></canvas>
+            <canvas id="rep" class="square" role="img" aria-label="The same agents with mutual repulsion form a spaced cluster."></canvas>
+          </div>
+          <canvas id="sepPlot" class="strip" role="img" aria-label="Live plot of the closest pair of agents against the robot size. Without repulsion the distance falls to zero. With repulsion it stays above the robot size."></canvas>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="note">
+          <p class="step">Closer to real robots</p>
+          <h3>Robots that cannot move sideways</h3>
+          <p>A unicycle must steer before it flees. The exact radius includes that lag.</p>
+          <div class="lab">
+            <span>Heading gain k&#8323;</span>
+            <div class="btns" id="k3btns" role="group" aria-label="Heading gain">
+              <button type="button" data-k="5" aria-pressed="false">5</button>
+              <button type="button" data-k="1" aria-pressed="true">1</button>
+              <button type="button" data-k="0.25" aria-pressed="false">0.25</button>
+            </div>
+          </div>
+          <div class="lab">
+            <span>Agents</span>
+            <div class="btns" id="nbtns" role="group" aria-label="Number of agents">
+              <button type="button" data-n="1" aria-pressed="true">1</button>
+              <button type="button" data-n="3" aria-pressed="false">3</button>
+            </div>
+          </div>
+          <p class="live" id="n3" aria-live="polite"></p>
+          <div class="btns">
+            <button id="p3" type="button">Pause</button>
+            <button id="res3" type="button">Restart</button>
+          </div>
+        </div>
+        <div class="stage">
+          <div class="duo">
+            <canvas id="uni" class="square" role="img" aria-label="Unicycle herder and agents drawn as triangles, with the exact orbit marked."></canvas>
+            <div class="plots">
+              <canvas id="uniR" role="img" aria-label="Live plot of orbit radius against the exact and large-gain predictions."></canvas>
+              <canvas id="uniA" role="img" aria-label="Live plot of heading error against its predicted value."></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="publications">
+    <div class="wrap sec">
+      <h2>Publications</h2>
+      <div class="two">
+        <p class="label">Conference</p>
+        <div class="list">
+          <div class="pub">
+            <span class="id">[C1]</span>
+            <p><strong>R. K. Singh</strong> and D. Chakraborty, &ldquo;Planar herding of multiple evaders by a single pursuer,&rdquo; in <em>Proc. 63rd IEEE Conference on Decision and Control (CDC)</em>, Milan, Italy, 2024, pp. 7375&ndash;7380. <a href="https://doi.org/10.1109/CDC56724.2024.10886844">doi:10.1109/CDC56724.2024.10886844</a></p>
+          </div>
+        </div>
+        <p class="label">Under review</p>
+        <div class="list">
+          <div class="pub">
+            <span class="id">[J1]</span>
+            <p><strong>R. K. Singh</strong> and D. Chakraborty, &ldquo;Planar herding of multiple agents with a single herder,&rdquo; submitted to <em>IEEE Transactions on Automatic Control</em>, May 2025; revised and resubmitted, June 2026. Preprint of an earlier version: <a href="https://arxiv.org/abs/2505.10048">arXiv:2505.10048</a>.</p>
+          </div>
+        </div>
+        <p class="label">In preparation</p>
+        <div class="list">
+          <p>Two journal manuscripts in preparation.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="background">
+    <div class="wrap sec">
+      <h2>Background</h2>
+      <div class="grid2">
+        <div class="group">
+          <p class="label">Education</p>
+          <ul class="rows">
+            <li><span class="when">2021 &ndash; present</span><span>Ph.D., Electrical Engineering, IIT Bombay. Advisor: Prof. Debraj Chakraborty</span></li>
+            <li><span class="when">2019 &ndash; 2021</span><span>M.Tech., Systems Engineering, IIT (BHU) Varanasi</span></li>
+            <li><span class="when">2013 &ndash; 2017</span><span>B.Tech., Electrical Engineering, MJP Rohilkhand University</span></li>
+          </ul>
+        </div>
+        <div class="group">
+          <p class="label">Awards, teaching and service</p>
+          <ul class="rows">
+            <li><span class="when">2024</span><span>Student Travel Support, IEEE CDC, Milan</span></li>
+            <li><span class="when">2024</span><span>Conference Travel Grant, IIT Bombay</span></li>
+            <li><span class="when">2021 &ndash; 2026</span><span>Teaching Assistant, Electrical Engineering, IIT Bombay</span></li>
+            <li><span class="when">2024, 2025</span><span>Reviewer, IEEE CDC and Indian Control Conference</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>rishabhksingh@iitb.ac.in &middot; rishabh13ee41@gmail.com</span>
+    <span>Simulations run live from the equations in the papers.</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var C = {}, sims = [], last = 0;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function readColors() {
+    var s = getComputedStyle(document.documentElement);
+    ["--fg", "--muted", "--line", "--herder", "--agent", "--accent", "--surface"].forEach(function (n) {
+      C[n] = s.getPropertyValue(n).trim();
+    });
+  }
+  function prep(c) { // size a canvas for the device and return its context and CSS size
+    var dpr = Math.min(window.devicePixelRatio || 1, 2), w = c.clientWidth, h = c.clientHeight;
+    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+      c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+    }
+    var x = c.getContext("2d");
+    x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.clearRect(0, 0, w, h);
+    return { x: x, w: w, h: h };
+  }
+  function view(g, half) {
+    var s = Math.min(g.w, g.h) / (2 * half), ox = g.w / 2, oy = g.h / 2;
+    return { s: s, X: function (a) { return ox + a * s; }, Y: function (b) { return oy - b * s; }, ox: ox, oy: oy };
+  }
+  function circle(x, v, r, dash, color) {
+    x.strokeStyle = color; x.lineWidth = 1; x.setLineDash(dash || []);
+    x.beginPath(); x.arc(v.ox, v.oy, r * v.s, 0, 2 * Math.PI); x.stroke(); x.setLineDash([]);
+  }
+  function plus(x, v) {
+    x.strokeStyle = C["--fg"]; x.lineWidth = 1; x.beginPath();
+    x.moveTo(v.ox - 5, v.oy); x.lineTo(v.ox + 5, v.oy); x.moveTo(v.ox, v.oy - 5); x.lineTo(v.ox, v.oy + 5); x.stroke();
+  }
+  function trail(x, v, pts, color, alpha) {
+    if (pts.length < 2) return;
+    x.strokeStyle = color; x.lineWidth = 1.25; x.globalAlpha = alpha || 0.2; x.beginPath();
+    x.moveTo(v.X(pts[0][0]), v.Y(pts[0][1]));
+    for (var i = 1; i < pts.length; i++) x.lineTo(v.X(pts[i][0]), v.Y(pts[i][1]));
+    x.stroke(); x.globalAlpha = 1;
+  }
+  function dot(x, px, py, r, color) { x.fillStyle = color; x.beginPath(); x.arc(px, py, r, 0, 2 * Math.PI); x.fill(); }
+  function label(x, text, px, py, color) {
+    x.fillStyle = color || C["--muted"]; x.font = '12px "IBM Plex Mono", ui-monospace, monospace'; x.fillText(text, px, py);
+  }
+  function pushTrail(t, p, n) { t.push(p); if (t.length > n) t.shift(); }
+  function pauseBtn(btn, sim) {
+    btn.textContent = sim.paused ? "Play" : "Pause";
+    btn.addEventListener("click", function () { sim.paused = !sim.paused; btn.textContent = sim.paused ? "Play" : "Pause"; });
+  }
+  function pressGroup(box, attr, fn) {
+    box.addEventListener("click", function (e) {
+      var b = e.target.closest("button"); if (!b) return;
+      box.querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", o === b ? "true" : "false"); });
+      fn(parseFloat(b.getAttribute(attr)));
+    });
+  }
+
+  /* Scrolling live plot. series: [{key, name, width}], refs: () => [{y, name, dash}] */
+  function Strip(canvas, o) {
+    var data = [];
+    return {
+      clear: function () { data = []; },
+      span: function (v) { o.span = v; },
+      add: function (t, vals) {
+        var prev = data[data.length - 1];
+        if (prev && t - prev[0] < o.span / 500) return;
+        data.push([t].concat(vals));
+        while (data.length && data[0][0] < t - o.span) data.shift();
+      },
+      draw: function () {
+        var g = prep(canvas), x = g.x, L = 40, Rt = 12, T = 24, B = 10, W = g.w - L - Rt, H = g.h - T - B;
+        if (W <= 0 || H <= 0) return;
+        var ymin = o.ymin, ymax = o.ymax;
+        var py = function (v) { return T + H - (v - ymin) / (ymax - ymin) * H; };
+        var now = data.length ? data[data.length - 1][0] : 0, win = Math.min(o.span, Math.max(now, o.span * 0.2)), t0 = Math.max(now - win, 0);
+        var px = function (t) { return L + (t - t0) / win * W; };
+        x.strokeStyle = C["--line"]; x.lineWidth = 1;
+        o.ticks.forEach(function (v) {
+          x.beginPath(); x.moveTo(L, py(v)); x.lineTo(L + W, py(v)); x.stroke();
+          label(x, String(v), L - 8 - 7.2 * String(v).length, py(v) + 4);
+        });
+        x.save(); x.beginPath(); x.rect(L, T, W, H); x.clip();
+        var refs = o.refs ? o.refs() : [];
+        refs.forEach(function (r) {
+          x.strokeStyle = C["--fg"]; x.lineWidth = 1.25; x.setLineDash(r.dash || [5, 4]);
+          x.beginPath(); x.moveTo(L, py(r.y)); x.lineTo(L + W, py(r.y)); x.stroke(); x.setLineDash([]);
+        });
+        var series = o.series();
+        var curve = function (s, i) {
+          if (data.length < 2) return;
+          x.strokeStyle = C[s.key]; x.lineWidth = s.width || 1.5; x.beginPath();
+          data.forEach(function (d, n) { if (n) x.lineTo(px(d[0]), py(d[i + 1])); else x.moveTo(px(d[0]), py(d[i + 1])); });
+          x.stroke();
+        };
+        series.forEach(function (s, i) { if (!s.top) curve(s, i); }); // the herd first, followed agents on top
+        series.forEach(function (s, i) { if (s.top) curve(s, i); });
+        x.restore();
+        // legend across the top: one swatch per named series and reference
+        var cx = L;
+        var title = g.w < 460 && o.short !== undefined ? o.short : o.title;
+        label(x, title, cx, 15, C["--fg"]);
+        cx += x.measureText(title).width + 14;
+        series.forEach(function (s) {
+          if (!s.name) return;
+          x.fillStyle = C[s.key]; x.fillRect(cx, 10, 14, 2.5); cx += 18;
+          label(x, s.name, cx, 15); cx += x.measureText(s.name).width + 12;
+        });
+        refs.forEach(function (r) {
+          if (!r.name) return;
+          x.strokeStyle = C["--fg"]; x.lineWidth = 1.25; x.setLineDash(r.dash || [5, 4]);
+          x.beginPath(); x.moveTo(cx, 11); x.lineTo(cx + 16, 11); x.stroke(); x.setLineDash([]);
+          cx += 20; label(x, r.name, cx, 15); cx += x.measureText(r.name).width + 12;
+        });
+      }
+    };
+  }
+
+  /* Repeatable random starts, so every visitor sees the same herd */
+  function seeded(s) { return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+  function discPoints(n, rmin, rmax, seed) {
+    var r = seeded(seed), out = [];
+    for (var i = 0; i < n; i++) {
+      var a = r() * 2 * Math.PI, d = Math.sqrt(rmin * rmin + r() * (rmax * rmax - rmin * rmin));
+      out.push([d * Math.cos(a), d * Math.sin(a)]);
+    }
+    return out;
+  }
+  /* Open-loop herd with optional mutual repulsion: one midpoint step */
+  function herdStep(h, R, K, w, g, dt) {
+    function field(p, ph) {
+      var hx = R * Math.cos(ph), hy = R * Math.sin(ph);
+      return p.map(function (a, i) {
+        var dx = a[0] - hx, dy = a[1] - hy, d = Math.hypot(dx, dy), c = K / (d * d * d), vx = c * dx, vy = c * dy;
+        if (g > 0) for (var j = 0; j < p.length; j++) {
+          if (j === i) continue;
+          var ex = a[0] - p[j][0], ey = a[1] - p[j][1], e = Math.max(Math.hypot(ex, ey), 1e-3), b = g / (e * e * e);
+          vx += b * ex; vy += b * ey;
+        }
+        return [vx, vy];
+      });
+    }
+    var a = field(h.q, h.ph), m = h.q.map(function (p, i) { return [p[0] + dt / 2 * a[i][0], p[1] + dt / 2 * a[i][1]]; });
+    var b = field(m, h.ph + w * dt / 2);
+    h.q = h.q.map(function (p, i) { return [p[0] + dt * b[i][0], p[1] + dt * b[i][1]]; });
+    h.ph += w * dt;
+  }
+
+  /* ---- The question: drag the herder and try to bring the agents to the target ---- */
+  (function () {
+    var K = 1, HALF = 2.6, N = 14, DMIN = 0.18, HERDER_SPEED = 2.2, NEAR = 0.45;
+    var canvas = $("sim"), q, h, aim, down = false;
+    var sim = { el: canvas, paused: false };
+    function reset() {
+      q = [];
+      discPoints(80, 0.85, 1.9, 21).forEach(function (p) { // keep the picture evenly spaced
+        var clear = Math.hypot(p[0] - 2.1, p[1] + 1.2) > 0.7 && q.every(function (o) { return Math.hypot(p[0] - o[0], p[1] - o[1]) > 0.55; });
+        if (clear && q.length < N) q.push(p);
+      });
+      h = [2.1, -1.2]; aim = h.slice();
+    }
+    function push(p) { // inverse-square repulsion from the herder
+      var dx = p[0] - h[0], dy = p[1] - h[1], d = Math.max(Math.hypot(dx, dy), DMIN), s = K / (d * d);
+      return [s * dx / d, s * dy / d, s];
+    }
+    function world(e) {
+      var b = canvas.getBoundingClientRect(), v = view({ w: b.width, h: b.height }, HALF);
+      return [(e.clientX - b.left - v.ox) / v.s, (v.oy - (e.clientY - b.top)) / v.s];
+    }
+    sim.tick = function (dt) {
+      if (!down) return;
+      var dx = aim[0] - h[0], dy = aim[1] - h[1], d = Math.hypot(dx, dy), m = Math.min(d, HERDER_SPEED * dt);
+      if (d > 1e-6) { h[0] += dx / d * m; h[1] += dy / d * m; }
+      for (var n = 0; n < 4; n++) q = q.map(function (p) { var a = push(p); return [p[0] + a[0] * dt / 4, p[1] + a[1] * dt / 4]; });
+    };
+    sim.draw = function () {
+      var g = prep(canvas), v = view(g, HALF), x = g.x, i;
+      if (!g.w) return;
+      // fading rings around the herder: its push weakens with distance
+      for (i = 1; i <= 4; i++) {
+        x.strokeStyle = C["--herder"]; x.globalAlpha = 0.34 / (i * i) + 0.03; x.lineWidth = 1;
+        x.beginPath(); x.arc(v.X(h[0]), v.Y(h[1]), i * 0.5 * v.s, 0, 2 * Math.PI); x.stroke();
+      }
+      x.globalAlpha = 1;
+      // target
+      x.strokeStyle = C["--fg"]; x.lineWidth = 1.5;
+      x.beginPath(); x.arc(v.ox, v.oy, NEAR * v.s, 0, 2 * Math.PI); x.stroke();
+      x.beginPath(); x.arc(v.ox, v.oy, NEAR * 0.5 * v.s, 0, 2 * Math.PI); x.stroke();
+      dot(x, v.ox, v.oy, 3.5, C["--fg"]);
+      label(x, "target", v.ox - 21, v.oy + NEAR * v.s + 16, C["--fg"]);
+      // agents with their push arrows
+      q.forEach(function (p) {
+        var a = push(p), px = v.X(p[0]), py = v.Y(p[1]), m = Math.hypot(a[0], a[1]), len = Math.max(7, Math.min(46, a[2] * 40));
+        var ux = a[0] / m, uy = -a[1] / m, ex = px + ux * (len + 7), ey = py + uy * (len + 7);
+        x.strokeStyle = C["--agent"]; x.fillStyle = C["--agent"]; x.lineWidth = 1.5;
+        x.beginPath(); x.moveTo(px + ux * 7, py + uy * 7); x.lineTo(ex, ey); x.stroke();
+        x.beginPath(); x.moveTo(ex + ux * 5, ey + uy * 5); x.lineTo(ex - uy * 3.5, ey + ux * 3.5); x.lineTo(ex + uy * 3.5, ey - ux * 3.5); x.closePath(); x.fill();
+        dot(x, px, py, 5, C["--agent"]);
+      });
+      // herder
+      x.fillStyle = C["--herder"]; x.fillRect(v.X(h[0]) - 8, v.Y(h[1]) - 8, 16, 16);
+      label(x, "herder", v.X(h[0]) - 22, v.Y(h[1]) + 24, C["--herder"]);
+      var near = q.filter(function (p) { return Math.hypot(p[0], p[1]) < NEAR; }).length;
+      label(x, near + " of " + q.length + " at the target", 12, 20);
+    };
+    canvas.addEventListener("pointerdown", function (e) {
+      down = true; aim = world(e);
+      if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener("pointermove", function (e) { if (down) aim = world(e); });
+    ["pointerup", "pointercancel"].forEach(function (n) { canvas.addEventListener(n, function () { down = false; }); });
+    $("res0").addEventListener("click", function () { reset(); sim.draw(); });
+    reset();
+    sims.push(sim);
+  })();
+
+  /* ---- Step 1: open loop with a chosen number of agents ---- */
+  (function () {
+    var R = 2, K = 1, DT = 0.005, SPEED = 4, HALF = 2.25;
+    var still = $("still"), wIn = $("w1"), nIn = $("n1");
+    var w = 1, N = 24, agents, t, rs, ps;
+    var sim = { el: still, paused: reduced };
+    var plot = Strip($("openPlot"), {
+      title: "Distance from target", short: "Distance", ymin: 0, ymax: 2.1, ticks: [0, 1, 2], span: 45,
+      series: function () { var o = []; for (var i = 0; i < N; i++) o.push({ key: "--agent", width: 1, name: i ? "" : "agents" }); return o; },
+      refs: function () { return [{ y: rs, name: "predicted orbit" }]; }
+    });
+    function roots() {
+      var lo = 0, hi = R / Math.sqrt(3), m;
+      for (var i = 0; i < 50; i++) { m = (lo + hi) / 2; if (w * m * (R * R - m * m) < K) lo = m; else hi = m; }
+      rs = lo;
+      var u = rs * rs / R; ps = [u, Math.sqrt(Math.max(rs * rs - u * u, 0))];
+    }
+    function f(u, v) { var dx = u - R, d = Math.hypot(dx, v), c = K / (d * d * d); return [c * dx + w * v, c * v - w * u]; }
+    function inBasin(u, v) { // used only to choose starts inside the region of attraction, as the theorem assumes
+      for (var n = 0; n < 6000; n++) {
+        var a = f(u, v), sp = Math.hypot(a[0], a[1]), dt = Math.min(0.05, 0.05 / sp), b = f(u + dt / 2 * a[0], v + dt / 2 * a[1]);
+        u += dt * b[0]; v += dt * b[1];
+        if (Math.hypot(u - ps[0], v - ps[1]) < 0.06) return true;
+        if (Math.hypot(u, v) > R + 0.6) return false;
+      }
+      return false;
+    }
+    function reset() {
+      agents = []; t = 0; plot.clear();
+      var r = seeded(11), tries = 0;
+      while (agents.length < N && tries++ < 4000) {
+        var a = r() * 2 * Math.PI, d = 0.3 + r() * 1.4, u = d * Math.cos(a), v = d * Math.sin(a);
+        if (inBasin(u, v)) agents.push({ u: u, v: v, s: [] });
+      }
+    }
+    function step() {
+      agents.forEach(function (a) {
+        var k1 = f(a.u, a.v), k2 = f(a.u + DT / 2 * k1[0], a.v + DT / 2 * k1[1]);
+        a.u += DT * k2[0]; a.v += DT * k2[1];
+      });
+      t += DT;
+    }
+    sim.tick = function (dt) {
+      var n = Math.round(dt * SPEED / DT), ph;
+      for (var i = 0; i < n; i++) step();
+      ph = w * t;
+      agents.forEach(function (a) {
+        pushTrail(a.s, [a.u * Math.cos(ph) - a.v * Math.sin(ph), a.u * Math.sin(ph) + a.v * Math.cos(ph)], 24);
+      });
+      plot.add(t, agents.map(function (a) { return Math.hypot(a.u, a.v); }));
+      if (t > 70) reset();
+    };
+    sim.draw = function () {
+      var g = prep(still), v = view(g, HALF), ph = w * t, x = g.x;
+      if (!g.w) return;
+      circle(x, v, R, null, C["--line"]); circle(x, v, rs, [4, 4], C["--muted"]); plus(x, v);
+      agents.forEach(function (a) {
+        trail(x, v, a.s, C["--agent"]);
+        dot(x, v.X(a.u * Math.cos(ph) - a.v * Math.sin(ph)), v.Y(a.u * Math.sin(ph) + a.v * Math.cos(ph)), 3.5, C["--agent"]);
+      });
+      x.fillStyle = C["--herder"]; x.fillRect(v.X(R * Math.cos(ph)) - 5, v.Y(R * Math.sin(ph)) - 5, 10, 10);
+      label(x, "herder", 12, 20, C["--herder"]); label(x, agents.length + " agents", 12, 36, C["--agent"]);
+      plot.draw();
+    };
+    function params() {
+      w = parseFloat(wIn.value); N = parseInt(nIn.value, 10);
+      $("w1Out").textContent = w.toFixed(2); $("n1Out").textContent = String(N); roots();
+    }
+    [wIn, nIn].forEach(function (i) { i.addEventListener("input", function () { params(); reset(); sim.draw(); }); });
+    $("res1").addEventListener("click", function () { reset(); sim.draw(); });
+    pauseBtn($("p1"), sim);
+    params(); reset();
+    sims.push(sim);
+  })();
+
+  /* ---- Step 2: the same herd, open loop against feedback ---- */
+  (function () {
+    var R = 2, K = 1, DT = 0.002, N = 16;
+    var nIn = $("nf");
+    var PRESETS = [
+      { w: 5, al: 1, kap: 1, ang: Math.PI / 4, rmin: 0.15, rmax: 0.92, speed: 1.2, half: 2.4, span: 16,
+        note: "Sensed agent starts outermost. arXiv preprint: r* = 0.2434, R* = 0.9385." },
+      { w: 0.25, al: 0.625, kap: 1.95, ang: 2.6, rmin: 0.2, rmax: 1.2, speed: 4, half: 3.1, span: 40,
+        note: "Open loop has no orbit below ω ≈ 0.325." }
+    ];
+    var ol = $("ol"), fb = $("fb"), P = PRESETS[0], A, B, t;
+    var sim = { el: fb, paused: reduced };
+    var plot = Strip($("fbPlot"), {
+      title: "Distance from target, feedback", short: "Feedback", ymin: 0, ymax: 3, ticks: [0, 1, 2], span: 16,
+      series: function () {
+        var o = [{ key: "--herder", name: "herder", width: 2.25, top: true }, { key: "--fg", name: "sensed agent", width: 1.75, top: true }];
+        for (var i = 1; i < N; i++) o.push({ key: "--agent", width: 1, name: i === 1 ? "others" : "" });
+        return o;
+      }
+    });
+    function radius(r0) { return R * Math.exp(P.al * (r0 - P.kap)); }
+    function make(feedback) {
+      var s = [[P.kap * Math.cos(P.ang), P.kap * Math.sin(P.ang)]].concat(discPoints(N - 1, P.rmin, P.rmax, 7));
+      return { q: s, ph: 0, fb: feedback, gone: s.map(function () { return false; }), tr: s.map(function () { return []; }), path: [] };
+    }
+    function herderR(h, p) { return h.fb ? radius(Math.hypot((p || h.q)[0][0], (p || h.q)[0][1])) : R; }
+    function F(h, p, ph) {
+      var Rp = herderR(h, p), hx = Rp * Math.cos(ph), hy = Rp * Math.sin(ph);
+      return p.map(function (a) {
+        var dx = a[0] - hx, dy = a[1] - hy, d = Math.hypot(dx, dy), c = K / (d * d * d);
+        return [c * dx, c * dy];
+      });
+    }
+    function advance(h) {
+      var a = F(h, h.q, h.ph), m = h.q.map(function (p, i) { return [p[0] + DT / 2 * a[i][0], p[1] + DT / 2 * a[i][1]]; });
+      var b = F(h, m, h.ph + P.w * DT / 2);
+      h.q = h.q.map(function (p, i) { return h.gone[i] ? p : [p[0] + DT * b[i][0], p[1] + DT * b[i][1]]; });
+      h.ph += P.w * DT;
+      h.q.forEach(function (p, i) { if (Math.hypot(p[0], p[1]) > P.half) h.gone[i] = true; });
+    }
+    function reset() { A = make(false); B = make(true); t = 0; plot.clear(); plot.span(P.span); }
+    sim.tick = function (dt) {
+      var n = Math.round(dt * P.speed / DT);
+      for (var i = 0; i < n; i++) {
+        advance(A); advance(B); t += DT;
+        if (i % 3 === 0) [A, B].forEach(function (h) { var Rp = herderR(h); pushTrail(h.path, [Rp * Math.cos(h.ph), Rp * Math.sin(h.ph)], 420); });
+      }
+      [A, B].forEach(function (h) {
+        h.q.forEach(function (p, i) { if (!h.gone[i]) pushTrail(h.tr[i], [p[0], p[1]], 26); });
+      });
+      var r = B.q.map(function (p) { return Math.hypot(p[0], p[1]); });
+      plot.add(t, [radius(r[0])].concat(r));
+    };
+    function panel(c, h, title) {
+      var g = prep(c), v = view(g, P.half), x = g.x, Rp = herderR(h);
+      if (!g.w) return;
+      plus(x, v);
+      trail(x, v, h.path, C["--herder"], 0.45);
+      h.tr.forEach(function (tr, i) { trail(x, v, tr, i ? C["--agent"] : C["--fg"]); });
+      x.fillStyle = C["--herder"]; x.fillRect(v.X(Rp * Math.cos(h.ph)) - 5, v.Y(Rp * Math.sin(h.ph)) - 5, 10, 10);
+      h.q.forEach(function (p, i) { if (i && !h.gone[i]) dot(x, v.X(p[0]), v.Y(p[1]), 3.5, C["--agent"]); });
+      if (!h.gone[0]) {
+        x.strokeStyle = C["--fg"]; x.lineWidth = 2;
+        x.beginPath(); x.arc(v.X(h.q[0][0]), v.Y(h.q[0][1]), 5, 0, 2 * Math.PI); x.stroke();
+      }
+      label(x, title, 10, 18, C["--fg"]);
+      label(x, h.gone.filter(Boolean).length + " of " + N + " lost", 10, 34);
+      label(x, "herder speed " + (P.w * Rp).toFixed(1), 10, 50);
+    }
+    sim.draw = function () {
+      panel(ol, A, "Open loop");
+      panel(fb, B, "Feedback  ○ sensed agent");
+      plot.draw();
+    };
+    nIn.addEventListener("input", function () { N = parseInt(nIn.value, 10); $("nfOut").textContent = String(N); reset(); sim.draw(); });
+    pressGroup($("w2btns"), "data-p", function (val) {
+      P = PRESETS[val]; $("n2").textContent = P.note; reset(); sim.draw();
+    });
+    $("res2").addEventListener("click", function () { reset(); sim.draw(); });
+    pauseBtn($("p2"), sim);
+    $("n2").textContent = P.note;
+    reset();
+    sims.push(sim);
+  })();
+
+  /* ---- Step 3: the same herd with and without mutual repulsion ---- */
+  (function () {
+    var R = 2, K = 1, DT = 0.005, SPEED = 4, HALF = 2.2, N = 16, BODY = 0.1;
+    var nIn = $("nr");
+    var GAMMAS = [0.0001, 0.0003, 0.001];
+    var left = $("noRep"), right = $("rep"), wIn = $("w3"), gIn = $("g3");
+    var w = 1, g = 0.001, A, B, t, sepA = 0, sepB = 0;
+    var sim = { el: right, paused: reduced };
+    var plot = Strip($("sepPlot"), {
+      title: "Closest two agents", short: "", ymin: 0, ymax: 0.5, ticks: [0, 0.2, 0.4], span: 60,
+      series: function () { return [{ key: "--fg", name: "no repulsion", width: 1.75 }, { key: "--agent", name: "repulsion", width: 2 }]; },
+      refs: function () { return [{ y: BODY, name: "robot size" }]; }
+    });
+    function closest(q) {
+      var best = Infinity, touching = 0;
+      for (var i = 0; i < q.length; i++) for (var j = i + 1; j < q.length; j++) {
+        var d = Math.hypot(q[i][0] - q[j][0], q[i][1] - q[j][1]);
+        if (d < best) best = d;
+        if (d < BODY) touching++;
+      }
+      return { best: best, touching: touching };
+    }
+    function make() {
+      var s = discPoints(N, 0.2, 1.1, 3);
+      return { q: s, ph: 0, tr: s.map(function () { return []; }) };
+    }
+    function reset() { A = make(); B = make(); t = 0; plot.clear(); }
+    sim.tick = function (dt) {
+      var n = Math.round(dt * SPEED / DT);
+      for (var i = 0; i < n; i++) { herdStep(A, R, K, w, 0, DT); herdStep(B, R, K, w, g, DT); t += DT; }
+      [A, B].forEach(function (h) { h.q.forEach(function (p, i) { pushTrail(h.tr[i], [p[0], p[1]], 22); }); });
+      plot.add(t, [closest(A.q).best, closest(B.q).best]);
+      if (t > 80) reset();
+    };
+    function panel(c, h, title) {
+      var q = prep(c), v = view(q, HALF), x = q.x;
+      if (!q.w) return;
+      circle(x, v, R, null, C["--line"]); plus(x, v);
+      h.tr.forEach(function (tr) { trail(x, v, tr, C["--agent"]); });
+      x.fillStyle = C["--agent"]; x.globalAlpha = 0.7;
+      h.q.forEach(function (p) { x.beginPath(); x.arc(v.X(p[0]), v.Y(p[1]), BODY / 2 * v.s, 0, 2 * Math.PI); x.fill(); });
+      x.globalAlpha = 1;
+      x.fillStyle = C["--herder"]; x.fillRect(v.X(R * Math.cos(h.ph)) - 5, v.Y(R * Math.sin(h.ph)) - 5, 10, 10);
+      label(x, title, 10, 18, C["--fg"]);
+      label(x, closest(h.q).touching + " pairs touching", 10, 34);
+    }
+    sim.draw = function () { panel(left, A, "No repulsion"); panel(right, B, "With repulsion"); plot.draw(); };
+    function params() {
+      w = parseFloat(wIn.value); g = GAMMAS[parseInt(gIn.value, 10)];
+      $("w3Out").textContent = w.toFixed(2); $("g3Out").textContent = String(g);
+    }
+    [wIn, gIn].forEach(function (i) { i.addEventListener("input", function () { params(); sim.draw(); }); });
+    nIn.addEventListener("input", function () { N = parseInt(nIn.value, 10); $("nrOut").textContent = String(N); reset(); sim.draw(); });
+    $("res4").addEventListener("click", function () { reset(); sim.draw(); });
+    pauseBtn($("p4"), sim);
+    params(); reset();
+    sims.push(sim);
+  })();
+
+  /* ---- Unicycle herder and agents ---- */
+  (function () {
+    var K = 0.02, R = 1, W = 0.125, KH = 1.5, KR = 1.4, DT = 0.02, SPEED = 25, HALF = 1.32, GAMMA = 3e-4;
+    var ONE = [[0.3, 0.1, 1]], THREE = [[0.3, 0.1, 1], [-0.25, 0.2, 3], [0.05, -0.35, 5]];
+    var uni = $("uni"), k3 = 1, N = 1, e, h, t, trails, stopped, errs;
+    var sim = { el: uni, paused: reduced };
+    function wrap(a) { return Math.atan2(Math.sin(a), Math.cos(a)); }
+    function exact() { // outer root of w^2 r^2 + 2 w k sin(mu)/r + k^2/r^4 = R^2 w^2, then the orbit radius
+      var mu = W / k3, s = Math.sin(-mu), c = Math.cos(mu);
+      var P = function (r) { return W * W * r * r - 2 * W * K * s / r + K * K / Math.pow(r, 4) - R * R * W * W; };
+      var lo = 0.82 * R, hi = 1.2 * R;
+      for (var i = 0; i < 70; i++) { var m = (lo + hi) / 2; if (P(m) < 0) lo = m; else hi = m; }
+      var sp = (W * lo - K * s / (lo * lo)) / (R * W), cp = K * c / (lo * lo * R * W);
+      return Math.hypot(R - lo * sp, lo * cp);
+    }
+    function largeGain() {
+      var lo = 0, hi = R / Math.sqrt(3);
+      for (var i = 0; i < 60; i++) { var m = (lo + hi) / 2; if (m * (R * R - m * m) < K / W) lo = m; else hi = m; }
+      return lo;
+    }
+    function agentSeries() {
+      var out = [];
+      for (var i = 0; i < N; i++) out.push({ key: "--agent", width: 1.5, name: i ? "" : (N > 1 ? "agents" : "agent") });
+      return out;
+    }
+    var plotR = Strip($("uniR"), {
+      title: "Orbit radius (m)", short: "Radius", ymin: 0, ymax: 0.6, ticks: [0, 0.2, 0.4], span: 420, series: agentSeries,
+      refs: function () { return [{ y: exact(), name: "exact" }, { y: largeGain(), name: "large gain", dash: [1, 3] }]; }
+    });
+    var plotA = Strip($("uniA"), {
+      title: "Heading error (rad)", short: "Heading error", ymin: -1, ymax: 0.5, ticks: [-1, -0.5, 0], span: 420, series: agentSeries,
+      refs: function () { return [{ y: -W / k3, name: "−ω/k₃" }]; }
+    });
+    function reset() {
+      e = (N === 1 ? ONE : THREE).map(function (p) { return p.slice(); });
+      h = [1.15, 0, Math.PI / 2 + 0.4]; t = 0; stopped = false; errs = e.map(function () { return 0; });
+      trails = e.map(function () { return []; }); plotR.clear(); plotA.clear();
+      $("n3").textContent = "";
+    }
+    function step() {
+      var rp = Math.hypot(h[0], h[1]), ap = wrap(Math.atan2(h[1], h[0]) + Math.PI / 2 - h[2]);
+      var wp = W + KH * ap + Math.atan(KR * (rp - R) / (R * W)), g = N === 1 ? 0 : GAMMA;
+      var vel = e.map(function (p, i) {
+        var dx = p[0] - h[0], dy = p[1] - h[1], d = Math.hypot(dx, dy), c = K / (d * d * d), vx = c * dx, vy = c * dy;
+        e.forEach(function (o, j) {
+          if (j === i) return;
+          var ax = p[0] - o[0], ay = p[1] - o[1], D = Math.max(Math.hypot(ax, ay), 1e-3), b = g / (D * D * D);
+          vx += b * ax; vy += b * ay;
+        });
+        return [vx, vy];
+      });
+      e = e.map(function (p, i) {
+        var sp = Math.hypot(vel[i][0], vel[i][1]), al = wrap(p[2] - Math.atan2(vel[i][1], vel[i][0]));
+        errs[i] = al;
+        return [p[0] + DT * sp * Math.cos(p[2]), p[1] + DT * sp * Math.sin(p[2]), p[2] - DT * k3 * al];
+      });
+      h = [h[0] + DT * R * W * Math.cos(h[2]), h[1] + DT * R * W * Math.sin(h[2]), h[2] + DT * wp];
+      t += DT;
+      if (e.some(function (p) { return Math.hypot(p[0], p[1]) > 1.25; })) {
+        stopped = true;
+        $("n3").textContent = "An agent escaped: slow steering shrinks the region of attraction.";
+      }
+    }
+    sim.tick = function (dt) {
+      if (stopped) return;
+      var n = Math.round(dt * SPEED / DT);
+      for (var i = 0; i < n && !stopped; i++) step();
+      e.forEach(function (p, i) { pushTrail(trails[i], [p[0], p[1]], 150); });
+      plotR.add(t, e.map(function (p) { return Math.hypot(p[0], p[1]); }));
+      plotA.add(t, errs.slice());
+    };
+    function robot(x, v, p, size, color) {
+      x.save(); x.translate(v.X(p[0]), v.Y(p[1])); x.rotate(-p[2]); x.fillStyle = color;
+      x.beginPath(); x.moveTo(size, 0); x.lineTo(-size * 0.7, size * 0.65); x.lineTo(-size * 0.7, -size * 0.65); x.closePath(); x.fill();
+      x.restore();
+    }
+    sim.draw = function () {
+      var g = prep(uni), v = view(g, HALF), x = g.x;
+      if (!g.w) return;
+      circle(x, v, R, null, C["--line"]);
+      circle(x, v, exact(), [5, 4], C["--fg"]);
+      plus(x, v);
+      trails.forEach(function (tr) { trail(x, v, tr, C["--agent"], 0.34); });
+      e.forEach(function (p) { robot(x, v, p, 8, C["--agent"]); });
+      robot(x, v, h, 10, C["--herder"]);
+      label(x, "t = " + t.toFixed(0) + " s", 10, 18);
+      plotR.draw(); plotA.draw();
+    };
+    pressGroup($("k3btns"), "data-k", function (val) { k3 = val; reset(); sim.draw(); });
+    pressGroup($("nbtns"), "data-n", function (val) { N = val; reset(); sim.draw(); });
+    $("res3").addEventListener("click", function () { reset(); sim.draw(); });
+    pauseBtn($("p3"), sim);
+    reset();
+    sims.push(sim);
+  })();
+
+  /* ---- One loop for all figures; each runs only while on screen ---- */
+  function drawAll() { sims.forEach(function (s) { s.draw(); }); }
+  function frame(now) {
+    requestAnimationFrame(frame);
+    var dt = Math.min((now - last) / 1000, 0.05); last = now;
+    if (document.hidden) return;
+    sims.forEach(function (s) {
+      if (s.paused || s.off) return;
+      s.tick(dt); s.draw();
+    });
+  }
+  function refresh() { readColors(); drawAll(); }
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refresh);
+  new MutationObserver(refresh).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  if ("IntersectionObserver" in window) {
+    sims.forEach(function (s) {
+      new IntersectionObserver(function (e) { s.off = !e[0].isIntersecting; }).observe(s.el);
+    });
+  }
+  window.addEventListener("resize", drawAll);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawAll);
+  readColors(); drawAll();
+  requestAnimationFrame(function (n) { last = n; frame(n); });
+})();
+</script>
+</body>
+</html>
